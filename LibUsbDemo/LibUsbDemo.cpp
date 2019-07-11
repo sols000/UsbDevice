@@ -45,7 +45,7 @@ static void print_devs(libusb_device **devs)
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::cout << "Hello libusb!\n";
 
 	shared_ptr<UsbDevice> TheDev = make_shared<UsbDevice>();
 
