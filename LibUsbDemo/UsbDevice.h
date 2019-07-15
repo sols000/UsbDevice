@@ -4,6 +4,13 @@
 
 #define UsbPackSize 64
 
+enum ETransferType
+{
+	eUsbRead = 0,
+	eUsbWrite,
+	eBulkReadWrite,
+};
+
 class OpenedDevice
 {
 public:
@@ -21,12 +28,6 @@ public:
 
 };
 
-enum ETransferType
-{
-	eUsbRead = 0,
-	eUsbWrite,
-	eBulkReadWrite,
-};
 
 enum ENoloDevVidPidType
 {
