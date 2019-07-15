@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="NoloDevUtils.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="UsbDevice.h" />
   </ItemGroup>
