@@ -329,4 +329,4 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
-!x64/Release/libusb-1.0.dll
+!/x64/Release/libusb-1.0.dll
