@@ -19,15 +19,14 @@ int main()
 	TheDev->InitLibUsb();
 
 	int TempChar;
-	while ((TempChar = getchar()) != 'Q')
+	while ((TempChar = getchar()) != 'Q' && TempChar != 'q')
 	{
-		printf("GetChar:%c\n", TempChar);
 		if (TempChar == 's')
 		{
-			TheDev->TrigerHapiticPause();
+			TheDev->TrigerHapiticPause(); 
 		}
 	}
-	getchar();
+	TheDev.reset();
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

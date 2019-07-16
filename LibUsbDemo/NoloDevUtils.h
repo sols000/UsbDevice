@@ -16,7 +16,7 @@ void printInterFace(const libusb_interface &UsbInterFace)
 		printf("   Endpoint:%d Addr:%X,Attr:%X,PackSize:%d,Int:%d\n", j, Endpoint.bEndpointAddress
 			, Endpoint.bmAttributes, Endpoint.wMaxPacketSize, Endpoint.bInterval);
 	}
-
+	printf("\n");
 }
 
 }
