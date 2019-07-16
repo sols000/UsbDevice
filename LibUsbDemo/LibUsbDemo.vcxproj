@@ -170,7 +170,7 @@
     <ClCompile Include="UsbDevice.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\NoloNewDevGit\CppCommon\CppCommon.vcxproj">
+    <ProjectReference Include="..\..\..\..\MyGitLabSpace\NoloNewDevGit\CppCommon\CppCommon.vcxproj">
       <Project>{38bcece8-0de8-498b-8464-c5041cc50f0e}</Project>
     </ProjectReference>
   </ItemGroup>

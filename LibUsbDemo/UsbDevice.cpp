@@ -124,8 +124,12 @@ void UsbDevice::UsbDevWorks()
 			//LibUsb Engin loop
 			if (Res != LIBUSB_SUCCESS)
 			{
-				printf("Engin loop");
+				printf("Engin loop error");
 				break;
+			}
+			else
+			{
+				printf(".");
 			}
 		}
 		else
@@ -140,6 +144,7 @@ void UsbDevice::UsbDevWorks()
 void UsbDevice::SerchingDevice()
 {
 	//如果已经打开，先关闭
+	ResetTransfer();
 	CloseUsbHandle();
 	int Res = LIBUSB_SUCCESS;
 	libusb_device **DevList = nullptr;
@@ -196,7 +201,7 @@ int UsbDevice::InitTransfer()
 	{
 		return LIBUSB_ERROR_INVALID_PARAM;
 	}
-	ResetTransfer();
+	//ResetTransfer();
 
 	libusb_device *TheDev = libusb_get_device(m_OpenedHandle);
 	//LIBUSB_SPEED_FULL == 2
@@ -205,6 +210,7 @@ int UsbDevice::InitTransfer()
 	//获取端点信息
 	libusb_config_descriptor *ConfigDes = nullptr;
 	UCHAR SendEndPoint = 0x02;
+	const UCHAR ReceivePoint = 0x82;
 	int Res = libusb_get_active_config_descriptor(TheDev, &ConfigDes);
 	if (Res != LIBUSB_SUCCESS)
 	{
@@ -213,12 +219,14 @@ int UsbDevice::InitTransfer()
 	}
 	//InterFaces 遍历
 	int numberInterFace = ConfigDes->bNumInterfaces;
+	int tempPoint = 0x81;
 	for (int i = 0; i < numberInterFace; i++)
 	{
 		const libusb_interface &tempInterFace = ConfigDes->interface[i];
 		mReadTransfer[i] = libusb_alloc_transfer(0);
-		libusb_fill_interrupt_transfer(mReadTransfer[i], m_OpenedHandle, 0x81+i,
-			m_ReadBuffer[i], UsbPackSize, &UsbDevice::StaticOnNewCallBack, this, 100);
+		tempPoint = (numberInterFace == 1)? ReceivePoint : (0x81 + i);
+		libusb_fill_interrupt_transfer(mReadTransfer[i], m_OpenedHandle, tempPoint,
+			m_ReadBuffer[i], UsbPackSize, &UsbDevice::StaticOnNewCallBack, this, 1000);
 		Res = libusb_claim_interface(m_OpenedHandle, i);
 		if (Res == LIBUSB_SUCCESS) {
 			printf("libusb_claim_interface Index:%d Addr:%X OK\n", i,(0x81+i));
@@ -236,14 +244,14 @@ int UsbDevice::InitTransfer()
 		else
 		{
 			printf("Frist SubmitTransfer Fail:%d\n", Res);
-			return Res;
+			goto InitTransferEnd;
 		}
 		NoloUtils::printInterFace(tempInterFace);//打印
 	}
-	m_WriteTransfer = libusb_alloc_transfer(0);
-	SendEndPoint = (numberInterFace == 1) ? 0x01 : 0x02;
+	m_WriteTransfer = libusb_alloc_transfer(0); 
+	//SendEndPoint = (numberInterFace == 1) ? 0x01 : 0x02;
 	libusb_fill_interrupt_transfer(m_WriteTransfer, m_OpenedHandle, SendEndPoint,m_WriteBuffer,
-		UsbPackSize, &UsbDevice::StaticSendCallBack, this, 100);
+		UsbPackSize, &UsbDevice::StaticSendCallBack, this, 1000);
 
 InitTransferEnd:
 
@@ -262,13 +270,15 @@ void UsbDevice::OnNewData(libusb_transfer * transfer)
 	case LIBUSB_TRANSFER_COMPLETED:
 		// Success here, data transfered are inside
 		tempBuffer = transfer->buffer;
-		timeMs = HighPrecisionTimer::Global()->GetTimeMsSinceLastRecord();
-		printf("SyncRead Data OK:%X Time:%.5lf\n", transfer->buffer[0], timeMs);
+		//timeMs = HighPrecisionTimer::Global()->GetTimeMsSinceLastRecord(true);
+		//printf("SyncRead Data OK:%X Time:%.5lf\n", transfer->buffer[0], timeMs);
 		libusb_submit_transfer(transfer);
+		printf("Submit Data OK:%X\n", transfer->buffer[0]);
 		break;
 	case LIBUSB_TRANSFER_TIMED_OUT:
 		//超时则 重新请求
 		libusb_submit_transfer(transfer);
+		printf("Time out Submit Data\n");
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
 	case LIBUSB_TRANSFER_NO_DEVICE:
@@ -276,7 +286,6 @@ void UsbDevice::OnNewData(libusb_transfer * transfer)
 	case LIBUSB_TRANSFER_STALL:
 	case LIBUSB_TRANSFER_OVERFLOW:
 		printf("OnNewUsbData Read_ERROR:%d\n", transfer->status);
-		ResetTransfer();
 		m_bDevConnected = false;
 		// Various type of errors here
 		break;
