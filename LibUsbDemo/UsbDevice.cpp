@@ -120,16 +120,11 @@ void UsbDevice::UsbDevWorks()
 	{
 		if (m_bDevConnected)
 		{
-			int Res = libusb_handle_events(NULL);
 			//LibUsb Engin loop
-			if (Res != LIBUSB_SUCCESS)
+			if (libusb_handle_events(NULL) != LIBUSB_SUCCESS)
 			{
 				printf("Engin loop error");
 				break;
-			}
-			else
-			{
-				printf(".");
 			}
 		}
 		else
@@ -138,6 +133,26 @@ void UsbDevice::UsbDevWorks()
 			SerchingDevice();
 			this_thread::sleep_for(chrono::microseconds(50));
 		}
+	}
+}
+
+static HighPrecisionTimer TheTimer;
+
+void UsbDevice::SendDataWork()
+{
+	UCHAR Sendbuffer[64] = {};
+	for (int i = 0;i<64; i++)
+	{
+		Sendbuffer[i] = (UCHAR)i;
+	}
+	auto TimeNow = chrono::system_clock::now();
+	static int i = 0;
+	while (true)
+	{
+		SendData(Sendbuffer,64);
+		TheTimer.RecordNow();
+		this_thread::sleep_until(TimeNow + chrono::milliseconds(8 * i));
+		i++;
 	}
 }
 
@@ -180,7 +195,9 @@ void UsbDevice::SerchingDevice()
 					if (Res == LIBUSB_SUCCESS)
 					{
 						m_bDevConnected = true;
-						printf("Serching Device:0X%X  Opened\n", (UINT)m_OpenedHandle);
+						printf("Serching Device:0x%X  Opened\n", (UINT)m_OpenedHandle);
+						thread theSendWork = thread(&UsbDevice::SendDataWork, this);
+						theSendWork.detach();
 					}
 					m_DevPID = pDestciptor->idProduct;
 					break;
@@ -270,15 +287,15 @@ void UsbDevice::OnNewData(libusb_transfer * transfer)
 	case LIBUSB_TRANSFER_COMPLETED:
 		// Success here, data transfered are inside
 		tempBuffer = transfer->buffer;
-		//timeMs = HighPrecisionTimer::Global()->GetTimeMsSinceLastRecord(true);
+		timeMs = TheTimer.GetTimeMsSinceLastRecord();
 		//printf("SyncRead Data OK:%X Time:%.5lf\n", transfer->buffer[0], timeMs);
+		printf("NewData:%X T:%.5lf   ", transfer->buffer[0], timeMs);
 		libusb_submit_transfer(transfer);
-		printf("Submit Data OK:%X\n", transfer->buffer[0]);
 		break;
 	case LIBUSB_TRANSFER_TIMED_OUT:
 		//超时则 重新请求
 		libusb_submit_transfer(transfer);
-		printf("Time out Submit Data\n");
+		//printf("Time out Submit Data\n");
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
 	case LIBUSB_TRANSFER_NO_DEVICE:
@@ -309,7 +326,7 @@ void UsbDevice::StaticSendCallBack(libusb_transfer * transfer)
 	case LIBUSB_TRANSFER_COMPLETED:
 		// Success here, data transfered are inside 
 		//printf("NewUsbData Comming:\n");
-		printf("Send Data OK:%X\n", transfer->buffer[0]);
+		printf("\nSend Data OK:%X\n", transfer->buffer[0]);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
 	case LIBUSB_TRANSFER_NO_DEVICE:

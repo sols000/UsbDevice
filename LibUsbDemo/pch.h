@@ -15,5 +15,6 @@
 #include <thread>
 #include <list>
 #include <vector>
+#include <chrono>
 
 #endif //PCH_H

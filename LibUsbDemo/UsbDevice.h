@@ -29,6 +29,7 @@ private:
 	void CloseUsbHandle();
 	void ResetTransfer();
 	void UsbDevWorks();
+	void SendDataWork();
 	void SerchingDevice();
 	//void ListenHandle(libusb_device_handle *DevHandle);
 	int InitTransfer();
