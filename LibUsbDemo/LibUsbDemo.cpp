@@ -5,19 +5,27 @@
 #include <iostream>
 #include <libusb.h>
 #include "UsbDevice.h"
+#include <HighPrecisionTimer.h>
 
 #pragma comment(lib,"libusb-1.0.lib")
 
 using namespace std;
+
+void OnNewData(const unsigned char *Buffer, void *Context)
+{
+	double timeMs = HighPrecisionTimer::Global()->GetTimeMsSinceLastRecord(true);
+	printf("NewData in CallBack:Time:%lf\n", timeMs);
+}
+
+
 
 int main()
 {
     std::cout << "Hello libusb!\n";
 
 	shared_ptr<UsbDevice> TheDev = make_shared<UsbDevice>();
-
+	TheDev->SetNewDataCallBack(OnNewData, nullptr);
 	TheDev->InitLibUsb();
-
 	int TempChar;
 	while ((TempChar = getchar()) != 'Q' && TempChar != 'q')
 	{

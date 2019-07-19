@@ -13,6 +13,8 @@ enum ETransferType
 	eBulkReadWrite,
 };
 
+//BufferSize is 64
+typedef void (LIBUSB_CALL *pfn_UsbNewDta_cb)(const unsigned char *Buffer,void *Context);
 
 class UsbDevice
 {
@@ -24,6 +26,7 @@ public:
 	void StartNoloDevice();
 	void TrigerHapiticPause();
 	bool SendData(UCHAR *pData, int len);
+	void SetNewDataCallBack(pfn_UsbNewDta_cb callback,void *Context);
 
 private:
 	void CloseUsbHandle();
@@ -54,6 +57,9 @@ private:
 	//Send to Device
 	libusb_transfer *m_WriteTransfer = nullptr;
 	UCHAR *m_WriteBuffer = nullptr;
+	//CallBack
+	pfn_UsbNewDta_cb m_NewDataCb = nullptr;
+	void *m_CallBackContex = nullptr;
 
 
 };

@@ -86,6 +86,12 @@ bool UsbDevice::SendData(UCHAR * pData,int len)
 	return true;
 }
 
+void UsbDevice::SetNewDataCallBack(pfn_UsbNewDta_cb callback, void * Context)
+{
+	m_NewDataCb = callback;
+	m_CallBackContex = Context;
+}
+
 
 void UsbDevice::CloseUsbHandle()
 {
@@ -114,8 +120,13 @@ void UsbDevice::ResetTransfer()
 	m_DevPID = 0;
 }
 
+
+static HighPrecisionTimer TheTimer;
+
 void UsbDevice::UsbDevWorks()
 {
+	UCHAR buffer[64];
+	double timeMs;
 	while (m_bRunning)
 	{
 		if (m_bDevConnected)
@@ -126,6 +137,19 @@ void UsbDevice::UsbDevWorks()
 				printf("Engin loop error");
 				break;
 			}
+
+			//SyncRead
+			//bool Res = SyncReadData(buffer);
+			//if (Res)
+			//{
+			//	timeMs = TheTimer.GetTimeMsSinceLastRecord(true);
+			//	//printf("SyncRead Data OK:%X Time:%.5lf\n", transfer->buffer[0], timeMs);
+			//	printf("NewData: T:%.5lf \n ",  timeMs);
+			//}
+			//else
+			//{
+			//	printf("Read Fail\n");
+			//}
 		}
 		else
 		{
@@ -136,10 +160,10 @@ void UsbDevice::UsbDevWorks()
 	}
 }
 
-static HighPrecisionTimer TheTimer;
 
 void UsbDevice::SendDataWork()
 {
+	return;
 	UCHAR Sendbuffer[64] = {};
 	for (int i = 0;i<64; i++)
 	{
@@ -196,8 +220,8 @@ void UsbDevice::SerchingDevice()
 					{
 						m_bDevConnected = true;
 						printf("Serching Device:0x%X  Opened\n", (UINT)m_OpenedHandle);
-						thread theSendWork = thread(&UsbDevice::SendDataWork, this);
-						theSendWork.detach();
+						//thread theSendWork = thread(&UsbDevice::SendDataWork, this);
+						//theSendWork.detach();
 					}
 					m_DevPID = pDestciptor->idProduct;
 					break;
@@ -238,12 +262,7 @@ int UsbDevice::InitTransfer()
 	int numberInterFace = ConfigDes->bNumInterfaces;
 	int tempPoint = 0x81;
 	for (int i = 0; i < numberInterFace; i++)
-	{
-		const libusb_interface &tempInterFace = ConfigDes->interface[i];
-		mReadTransfer[i] = libusb_alloc_transfer(0);
-		tempPoint = (numberInterFace == 1)? ReceivePoint : (0x81 + i);
-		libusb_fill_interrupt_transfer(mReadTransfer[i], m_OpenedHandle, tempPoint,
-			m_ReadBuffer[i], UsbPackSize, &UsbDevice::StaticOnNewCallBack, this, 1000);
+	{	
 		Res = libusb_claim_interface(m_OpenedHandle, i);
 		if (Res == LIBUSB_SUCCESS) {
 			printf("libusb_claim_interface Index:%d Addr:%X OK\n", i,(0x81+i));
@@ -253,6 +272,12 @@ int UsbDevice::InitTransfer()
 			printf("Can not libusb_claim_interfac:%d Error:%d\n", (0x81 + i), Res);
 			goto InitTransferEnd;
 		}
+		const libusb_interface &tempInterFace = ConfigDes->interface[i];
+		mReadTransfer[i] = libusb_alloc_transfer(0);
+		tempPoint = (numberInterFace == 1)? ReceivePoint : (0x81 + i);
+		libusb_fill_interrupt_transfer(mReadTransfer[i], m_OpenedHandle, tempPoint,
+			m_ReadBuffer[i], UsbPackSize, &UsbDevice::StaticOnNewCallBack, this, 1000);
+
 		Res = libusb_submit_transfer(mReadTransfer[i]);
 		if (Res == LIBUSB_SUCCESS)
 		{
@@ -287,9 +312,15 @@ void UsbDevice::OnNewData(libusb_transfer * transfer)
 	case LIBUSB_TRANSFER_COMPLETED:
 		// Success here, data transfered are inside
 		tempBuffer = transfer->buffer;
-		timeMs = TheTimer.GetTimeMsSinceLastRecord();
+		timeMs = TheTimer.GetTimeMsSinceLastRecord(true);
 		//printf("SyncRead Data OK:%X Time:%.5lf\n", transfer->buffer[0], timeMs);
-		printf("NewData:%X T:%.5lf   ", transfer->buffer[0], timeMs);
+		//printf("NewData:%X T:%.5lf \n ", transfer->buffer[0], timeMs);
+
+		if (m_NewDataCb)
+		{
+			m_NewDataCb(transfer->buffer, m_CallBackContex);
+		}
+
 		libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_TIMED_OUT:
